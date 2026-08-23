@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zona Wi-Fi Hotspot</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1FA2FF 0%, #12D8FA 100%); min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 15px; }
+        .card { background: white; width: 100%; max-width: 380px; padding: 30px 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); text-align: center; }
+        h2 { color: #0072ff; margin-top: 0; margin-bottom: 10px; }
+        p { color: #555; font-size: 14px; line-height: 1.4; margin-bottom: 20px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px 15px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: #0072ff; }
+        button, .btn-download { width: 100%; padding: 12px; background: #0072ff; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; transition: background 0.3s; text-decoration: none; display: inline-block; }
+        button:hover, .btn-download:hover { background: #005bb5; }
+        .footer { margin-top: 20px; font-size: 11px; color: #888; }
+        .link-alterno { margin-top: 16px; font-size: 12px; color: #999; text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; }
+        .oculto { display: none; }
+        .aviso { background: #fff4e5; border: 1px solid #ffcc80; color: #995c00; font-size: 13px; text-align: left; padding: 10px 12px; border-radius: 8px; margin-bottom: 16px; }
+        .disculpa { background: #eef6ff; border: 1px solid #b6d9ff; color: #0058b3; font-size: 13px; text-align: left; padding: 10px 12px; border-radius: 8px; margin-bottom: 16px; }
+        .error-match { color: #c0392b; font-size: 12px; margin: 4px 0 0 0; text-align: left; display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Zona Wi-Fi</h2>
+
+        <!-- ============ SECCIÓN ANDROID: descargar la app (obligatorio) ============ -->
+        <div id="seccion-app" class="oculto">
+            <div class="aviso">
+                Es necesario descargar la app para conectarte correctamente. Sin la app,
+                es común tener errores de conexión y que la red se corte al moverte
+                de un lugar a otro.
+            </div>
+            <a href="app.apk" download="ZonaWiFi.apk" class="btn-download">Descargar la app</a>
+            <button type="button" class="link-alterno" onclick="mostrarFormularioManual()">
+                Entiendo el riesgo, continuar sin la app
+            </button>
+        </div>
+
+        <!-- ============ SECCIÓN iOS: disculpa + PIN dos veces ============ -->
+        <div id="seccion-ios" class="oculto">
+            <div class="disculpa">
+                Aún no tenemos una app para iPhone — estamos trabajando en su
+                creación. Mientras tanto, disculpa las molestias con la conexión;
+                seguimos mejorando la experiencia para todos los usuarios.
+            </div>
+            <p>Para ingresar, escribe tu PIN dos veces (en ambos campos).</p>
+            <form name="login-ios" action="$(link-login-only)" method="post" onsubmit="return validarCoincidenciaIOS()">
+                <input type="hidden" name="dst" value="$(link-orig)" />
+                <input type="hidden" name="popup" value="true" />
+
+                <input type="text" id="ios-usuario" name="username" placeholder="Ingresa tu PIN"
+                       inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                <input type="text" id="ios-clave" name="password" placeholder="Ingresa tu PIN otra vez"
+                       inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                <div id="ios-error" class="error-match">Los dos campos deben ser iguales.</div>
+
+                $(if error)<div style="color:red; font-size:12px; margin:5px 0;">$(error)</div>$(endif)
+
+                <button type="submit">Entrar a la Red</button>
+            </form>
+        </div>
+
+        <!-- ============ SECCIÓN FORMULARIO NORMAL (computadoras) ============ -->
+        <div id="seccion-formulario">
+            <p>Abre tu Aplicación Móvil para conectar automáticamente o ingresa tu PIN manualmente a continuación.</p>
+
+            $(if chap-id)
+            <!-- Variables invisibles que lee tu App móvil -->
+            <form name="sendin" action="$(link-login-only)" method="post">
+                <input type="hidden" name="username" />
+                <input type="hidden" name="password" />
+                <input type="hidden" id="chap-id" name="chap-id" value="$(chap-id)" />
+                <input type="hidden" id="chap-challenge" name="chap-challenge" value="$(chap-challenge)" />
+                <input type="hidden" name="dst" value="$(link-orig)" />
+                <input type="hidden" name="popup" value="true" />
+            </form>
+
+            <script type="text/javascript" src="md5.js"></script>
+            <script type="text/javascript">
+                function doLogin() {
+                    document.sendin.username.value = document.login.username.value;
+                    document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+                    document.sendin.submit();
+                    return false;
+                }
+            </script>
+            $(endif)
+
+            <!-- Formulario manual web (con campo totalmente limpio) -->
+            <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif)>
+                <input type="hidden" name="dst" value="$(link-orig)" />
+                <input type="hidden" name="popup" value="true" />
+
+                <input type="text" name="username" placeholder="Ingrese su PIN de ficha"
+                       inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                <input type="password" name="password" placeholder="Contraseña (opcional)"
+                       inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                $(if error)<div style="color:red; font-size:12px; margin:5px 0;">$(error)</div>$(endif)
+
+                <button type="submit">Entrar a la Red</button>
+            </form>
+        </div>
+
+        <div class="footer">
+            Copyright &copy; 2026 | Sistema de Acceso Wi-Fi
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var ua = navigator.userAgent || navigator.vendor || window.opera || "";
+            var esAndroid = /android/i.test(ua);
+            var esIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+
+            if (esAndroid) {
+                document.getElementById("seccion-app").classList.remove("oculto");
+                document.getElementById("seccion-formulario").classList.add("oculto");
+            } else if (esIOS) {
+                document.getElementById("seccion-ios").classList.remove("oculto");
+                document.getElementById("seccion-formulario").classList.add("oculto");
+            }
+        })();
+
+        function mostrarFormularioManual() {
+            document.getElementById("seccion-app").classList.add("oculto");
+            document.getElementById("seccion-formulario").classList.remove("oculto");
+        }
+
+        function validarCoincidenciaIOS() {
+            var u = document.getElementById("ios-usuario").value;
+            var p = document.getElementById("ios-clave").value;
+            var err = document.getElementById("ios-error");
+            if (u === "" || p === "" || u !== p) {
+                err.style.display = "block";
+                return false;
+            }
+            err.style.display = "none";
+            return true;
+        }
+    </script>
+</body>
+</html>
